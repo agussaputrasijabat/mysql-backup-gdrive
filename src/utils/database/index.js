@@ -9,7 +9,7 @@ class Database {
 			connection: {
 				host: process.env.DB_HOST,
 				user: process.env.DB_USER,
-				password: process.env.DB_PASS || '',
+				password: process.env.DB_PASSWORD || '',
 			},
 		});
 	}
@@ -20,7 +20,7 @@ class Database {
 		let records = await self.knex.raw(`SHOW DATABASES`);
 		if (records.length > 0 && records[0].length > 0) {
 			records[0].map((x) => {
-				if (x.Database != 'information_schema' && x.Database != 'mysql' && x.Database != 'performance_schema') {
+				if (x.Database != 'sys' && x.Database != 'information_schema' && x.Database != 'mysql' && x.Database != 'performance_schema') {
 					results.push(x.Database);
 				}
 			});
