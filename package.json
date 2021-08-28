@@ -1,0 +1,19 @@
+{
+	"name": "mysql-backup-gdrive",
+	"version": "1.0.0",
+	"description": "Easily backup your mysql databases to Google Drive",
+	"main": "index.js",
+	"author": "Agus Saputra Sijabat",
+	"license": "MIT",
+	"dependencies": {
+		"chalk": "^4.1.2",
+		"delay": "^4.4.0",
+		"dotenv": "^8.2.0",
+		"filesize": "^6.4.0",
+		"googleapis": "^62.0.0",
+		"moment": "^2.29.1",
+		"mysql": "^2.18.1",
+		"readline": "^1.3.0",
+		"yargs": "^16.1.0"
+	}
+}
