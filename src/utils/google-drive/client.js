@@ -11,7 +11,6 @@ if (!fs.existsSync(credentialsPath)) fs.mkdirSync(credentialsPath);
 
 class Client {
 	constructor(options) {
-		this.stream = streamify();
 		this.google = google;
 		this.client = this;
 		var defaultOptions = {
@@ -26,8 +25,8 @@ class Client {
 				token_uri: 'https://oauth2.googleapis.com/token',
 				auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
 			},
-			credentials_path: path.join(credentialsPath, 'oauth2.keys.json'),
-			token_path: path.join(credentialsPath, 'oauth2.token.json'),
+			credentials_path: path.join(credentialsPath, `oauth2.keys.json`),
+			token_path: path.join(credentialsPath, `${options.account}.oauth2.token.json`),
 			server_port: 8885,
 		};
 
@@ -38,6 +37,7 @@ class Client {
 		}
 
 		let isCredentialsExists = fs.existsSync(this.options.credentials_path);
+
 		let keys = {};
 		if (this.options.client && this.options.client.client_id) {
 			keys = this.options.client;
@@ -48,6 +48,7 @@ class Client {
 			fs.writeFile(this.options.credentials_path, JSON.stringify({ installed: this.options.client }), function (err) {});
 			throw new Error('Please config credentials file at: ' + chalk.bold.red(this.options.credentials_path));
 		}
+
 		if (!isCredentialsExists) {
 			fs.writeFile(this.options.credentials_path, JSON.stringify({ installed: this.options.client }), function (err) {});
 		}
@@ -114,13 +115,15 @@ class Client {
 					this.oAuth2Client.getToken(code, (err, token) => {
 						if (err) return console.error('Error retrieving access token', err);
 						this.oAuth2Client.setCredentials(token);
-						// Store the token to disk for later program executions
-						fs.writeFile(tokenPath, JSON.stringify(token), (err) => {
-							if (err) return console.error(err);
-							console.log('Token stored to', tokenPath);
-						});
 
-						resolve(this.oAuth2Client);
+						try {
+							// Store the token to disk for later program executions
+							fs.writeFileSync(tokenPath, JSON.stringify(token));
+							console.log('Token stored to', tokenPath);
+							resolve(this.oAuth2Client);
+						} catch (error) {
+							reject(error);
+						}
 					});
 				});
 			}

@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const mime = require('mime-types');
 const Client = require('./client');
+const asyncLoop = require('../asyncLoop');
 
 class Drive extends Client {
 	constructor(options) {
@@ -16,12 +18,9 @@ class Drive extends Client {
 
 	async init() {
 		const self = this;
-		var file = await self.searchFile(self.baseFolderName, baseSharedFolder);
-		if (file) {
-			baseParentFolderId = file.id;
-		} else {
-			file = await self.createFolderOnRoot(self.baseFolderName, baseSharedFolder);
-			baseParentFolderId = file.id;
+		var file = await self.searchFile(self.baseFolderName);
+		if (!file) {
+			file = await self.createFolderOnRoot(self.baseFolderName);
 		}
 	}
 
@@ -30,6 +29,7 @@ class Drive extends Client {
 
 		try {
 			var options = {
+				q: `trashed=false`,
 				fields: 'nextPageToken, files(id,name,modifiedTime,createdTime)',
 				pageSize: 200,
 				pageToken: pageToken,
@@ -37,7 +37,7 @@ class Drive extends Client {
 			};
 
 			if (folderId) {
-				options.q = `'${folderId}' in parents`;
+				options.q = `${options.q} and '${folderId}' in parents`;
 			}
 
 			var pageToken = null;
@@ -56,7 +56,7 @@ class Drive extends Client {
 
 		try {
 			var options = {
-				q: `name = '${name}'`,
+				q: `name = '${name}' and trashed=false`,
 				fields: 'nextPageToken, files(*)',
 				spaces: 'drive',
 				pageToken: pageToken,
@@ -89,13 +89,15 @@ class Drive extends Client {
 	 */
 	async createFolder(name, folderId) {
 		const self = this;
-		if (!folderId) folderId = baseParentFolderId;
 
 		var fileMetadata = {
 			name: name,
 			mimeType: 'application/vnd.google-apps.folder',
-			parents: [folderId],
 		};
+
+		if (folderId) {
+			fileMetadata.parents = [folderId];
+		}
 
 		var result = await self.drive.files.create({
 			resource: fileMetadata,
@@ -104,6 +106,28 @@ class Drive extends Client {
 
 		if (result.status == 200) return result.data;
 		else return null;
+	}
+
+	/**
+	 * Create google drive folder
+	 */
+	async createFolderRecursive(name, folderId = null) {
+		const self = this;
+
+		let folders = name.split('/');
+		var lastFile = null;
+
+		await asyncLoop.foreach(folders, async (folder) => {
+			var file = await self.searchFile(folder, lastFile ? lastFile.id : null);
+
+			if (!file) {
+				lastFile = await self.createFolder(folder, lastFile ? lastFile.id : null);
+			} else {
+				lastFile = file;
+			}
+		});
+
+		return lastFile;
 	}
 
 	/**
@@ -128,7 +152,6 @@ class Drive extends Client {
 	async upload(filename, folderId) {
 		const self = this;
 		var fileTitle = `${path.basename(filename)}`;
-		if (!folderId) folderId = baseParentFolderId;
 
 		var fileMetadata = {
 			name: fileTitle,
@@ -159,4 +182,4 @@ class Drive extends Client {
 	}
 }
 
-module.exports = new Drive();
+module.exports = Drive;
