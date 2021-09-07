@@ -1,4 +1,6 @@
 const fs = require('fs');
+const path = require('path');
+const glob = require('glob');
 const asyncLoop = require('./utils/asyncLoop');
 
 require('yargs')
@@ -18,7 +20,28 @@ require('yargs')
 				describe: 'The selected Google Drive account',
 			});
 		},
-		backup
+		async function (argv) {
+			if (argv.env == '*') {
+				let envFiles = glob.sync(`${process.cwd()}/*.env`, { dot: true });
+
+				console.log(`Backup databases from ${envFiles.length} environments\n`);
+				await asyncForEach(envFiles, async (envFile) => {
+					var newArgv = argv;
+
+					newArgv.env = path.parse(envFile).name;
+					if (newArgv.env == '.env') newArgv.env = '';
+
+					console.log(`ENVIRONMENT: ${newArgv.env || 'default'}\n`);
+					await backup(newArgv);
+					console.log('\n');
+				});
+			} else {
+				await backup(argv);
+			}
+
+			console.log('Backup done 👌');
+			process.exit();
+		}
 	)
 	.command(
 		'auth [account]',
@@ -105,10 +128,6 @@ async function backup(argv) {
 
 		console.log(``);
 	});
-
-	console.log('Backup done 👌');
-
-	process.exit();
 }
 
 async function auth(argv) {
